@@ -65,5 +65,5 @@ jobs:
               --name bingo-now \
               --restart unless-stopped \
               -e API_KEY=$API_KEY \
-              -p 8080:8080 \
+              -p 80:8080 \
               277707121995.dkr.ecr.us-east-2.amazonaws.com/mikey/bingo-now:latest

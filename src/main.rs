@@ -4,7 +4,6 @@ use axum::{
     Router
 };
 use arc_swap::ArcSwap;
-use dotenvy::dotenv;
 use std::{env, sync::Arc};
 use tokio::sync::mpsc;
 use tower::ServiceBuilder;
@@ -27,7 +26,8 @@ async fn main() {
 
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap()
+            tracing_subscriber::EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
         )
         .without_time()
         .compact()
@@ -60,10 +60,10 @@ async fn main() {
             ))
         );
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
         .await
         .unwrap();
-    println!("Server running @ http://{}", "0.0.0.0:3000");
+    println!("Server running @ http://{}", "0.0.0.0:8080");
 
     axum::serve(listener, app)
         .await

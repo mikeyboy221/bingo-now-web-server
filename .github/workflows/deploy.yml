@@ -1,0 +1,69 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  ECR_REGISTRY: 277707121995.dkr.ecr.us-east-2.amazonaws.com/mikey
+  ECR_REPOSITORY: bingo-now
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag and push image
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            API_KEY=$(aws ssm get-parameter \
+              --name "/bingo-now/api_key" \
+              --with-decryption \
+              --region us-east-2 \
+              --query "Parameter.Value" \
+              --output text)
+
+            aws ecr get-login-password --region us-east-2 | \
+              docker login --username AWS --password-stdin 277707121995.dkr.ecr.us-east-2.amazonaws.com
+            docker pull 277707121995.dkr.ecr.us-east-2.amazonaws.com/mikey/bingo-now:latest
+            docker stop bingo-now || true
+            docker rm bingo-now || true
+            docker run -d \
+              --name bingo-now \
+              --restart unless-stopped \
+              -e API_KEY=$API_KEY \
+              -p 8080:8080 \
+              277707121995.dkr.ecr.us-east-2.amazonaws.com/mikey/bingo-now:latest

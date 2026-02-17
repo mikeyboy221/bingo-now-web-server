@@ -4,7 +4,8 @@ use axum::{
     Router
 };
 use arc_swap::ArcSwap;
-use std::sync::Arc;
+use dotenvy::dotenv;
+use std::{env, sync::Arc};
 use tokio::sync::mpsc;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
@@ -37,7 +38,8 @@ async fn main() {
     tokio::spawn(bingo::game::run(win_rx, Arc::clone(&game_state)));
 
     let app_state = AppState {
-        api_key: "Test".to_string(),
+        api_key: env::var("API_KEY")
+            .expect("API_KEY must be set"),
         game: game_state,
         win_tx: win_tx
     };

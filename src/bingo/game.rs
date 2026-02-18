@@ -13,10 +13,10 @@ use rand::seq::SliceRandom;
 use crate::bingo::{events, patterns};
 
 const INTERMISSION_DURATION_IN_SECS: u64 = 10; 
-const CALL_DURATION_IN_SECS: u64 = 1;
-const ROUND_WIN_DURATION_IN_SECS: u64 = 10;
-const NEW_ROUND_DURATION_IN_SECS: u64 = 3;
-const END_OF_GAME_DURATION_IN_SECS: u64 = 10;
+const CALL_DURATION_IN_SECS: u64 = 6;
+const ROUND_WIN_DURATION_IN_SECS: u64 = 16;
+const NEW_ROUND_DURATION_IN_SECS: u64 = 4;
+const END_OF_GAME_DURATION_IN_SECS: u64 = 16;
 
 #[derive(Clone, Serialize)]
 pub struct Winner {

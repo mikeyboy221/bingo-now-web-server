@@ -54,7 +54,9 @@ pub async fn submit_win(
     };
 
     match app_state.win_tx.send(win_submission) {
-        Ok(_) => StatusCode::OK.into_response(),
+        Ok(_) => {
+            StatusCode::OK.into_response()
+        }
         Err(_) => {
             tracing::warn!("Failed to send win submission");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

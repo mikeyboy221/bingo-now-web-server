@@ -13,9 +13,9 @@ use rand::seq::SliceRandom;
 use crate::bingo::{events, patterns};
 
 const INTERMISSION_DURATION_IN_SECS: u64 = 10; 
-const CALL_DURATION_IN_SECS: u64 = 6;
+const CALL_DURATION_IN_SECS: u64 = 8;
 const ROUND_WIN_DURATION_IN_SECS: u64 = 16;
-const NEW_ROUND_DURATION_IN_SECS: u64 = 4;
+const NEW_ROUND_DURATION_IN_SECS: u64 = 6;
 const END_OF_GAME_DURATION_IN_SECS: u64 = 16;
 
 #[derive(Clone, Serialize)]
@@ -25,7 +25,7 @@ pub struct Winner {
     position: u8,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct WinSubmission {
     pub user_id: u32,
     pub timestamp_millis: i64,
@@ -42,11 +42,13 @@ pub enum GameType {
 
 impl GameType {
     fn random() -> Self {
-        match rand::random_range(0..2) {
-            0 => Self::Classic,
-            1 => Self::British,
-            _ => Self::Picture,
-        }
+        // match rand::random_range(0..2) {
+        //     0 => Self::Classic,
+        //     1 => Self::British,
+        //     _ => Self::Picture,
+        // }
+
+        Self::British
     }
 }
 
@@ -92,6 +94,8 @@ impl Game {
     }
 
     pub fn process_win_submission(&mut self, submission: WinSubmission) -> bool {
+        tracing::info!("{:?}", submission);
+
         let valid_submission_call = submission.call == self.current_call_index;
         if !valid_submission_call {
             tracing::debug!("Submission call invalid, submitted with call {}, game call {}", submission.call, self.current_call_index);
@@ -99,23 +103,24 @@ impl Game {
         }
         
         let millis_elapsed_since_call = submission.timestamp_millis - self.last_call_time;
-        let secs_elapsed_since_call = millis_elapsed_since_call / 1000;
-        let valid_submission_time = secs_elapsed_since_call < CALL_DURATION_IN_SECS as i64;
+        let secs_elapsed_since_call = millis_elapsed_since_call as f64 / 1000.0;
+        let valid_submission_time = millis_elapsed_since_call < (CALL_DURATION_IN_SECS * 1000) as i64;
         if !valid_submission_time {
             tracing::debug!(
-                "Submission time invalid, {}s elapsed since call, call duration {}s", 
+                "Submission time invalid, {:.2}s elapsed since call, call duration {}s", 
                 secs_elapsed_since_call,
                 CALL_DURATION_IN_SECS
             );
             return false;
         }
 
+
         if self.pending_winners.iter().any(|s| s.user_id == submission.user_id) {
             tracing::debug!("User has already submitted win");
             return false;
         }
 
-        tracing::info!("Submitted win for user {}, answered in {}s", submission.user_id, secs_elapsed_since_call);
+        tracing::info!("Submitted win for user {}, answered in {:.2}s", submission.user_id, secs_elapsed_since_call);
         self.pending_winners.push(submission);
         true
     }
@@ -205,11 +210,14 @@ pub async fn run(
 
             game.events.push(events::new(events::EventType::NewCall, CALL_DURATION_IN_SECS));
             game_state.store(Arc::new(game.clone()));
-            sleep(Duration::from_secs(CALL_DURATION_IN_SECS)).await;
 
-            // check for winners
-            while let Ok(submission) = win_receiver.try_recv() {
-                game.process_win_submission(submission);
+            let deadline = tokio::time::Instant::now() + Duration::from_secs(CALL_DURATION_IN_SECS);
+            loop {
+                match tokio::time::timeout_at(deadline, win_receiver.recv()).await {
+                    Ok(Some(submission)) => { game.process_win_submission(submission); },
+                    Ok(None) => break,
+                    Err(_) => break
+                }
             }
 
             // process winners

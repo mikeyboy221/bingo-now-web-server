@@ -42,13 +42,11 @@ pub enum GameType {
 
 impl GameType {
     fn random() -> Self {
-        // match rand::random_range(0..2) {
-        //     0 => Self::Classic,
-        //     1 => Self::British,
-        //     _ => Self::Picture,
-        // }
-
-        Self::British
+        match rand::random_range(0..2) {
+            0 => Self::Classic,
+            1 => Self::British,
+            _ => Self::Picture,
+        }
     }
 }
 
@@ -159,7 +157,8 @@ impl Game {
 }
 
 pub fn new() -> Game {
-    let random_game_type =  GameType::random();
+    // let random_game_type =  GameType::random();
+    let random_game_type = GameType::British;
     let patterns = patterns::get_game_patterns(&random_game_type);
     let number_of_rounds = patterns.len();
     let mut numbers: Vec<u8> = match random_game_type {

@@ -54,6 +54,7 @@ async fn main() {
         .layer(
             ServiceBuilder::new()
             .layer(TraceLayer::new_for_http())
+            .layer(axum_middleware::from_fn(middleware::version::add_version_header))
             .layer(axum_middleware::from_fn_with_state(
                     app_state.clone(),
                     middleware::auth::auth_middleware

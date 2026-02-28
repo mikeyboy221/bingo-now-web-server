@@ -19,7 +19,7 @@ use chrono::DateTime;
 use serde::{Serialize, Deserialize};
 
 
-pub async fn connnect() {
+pub async fn connect() {
 
 }
 
@@ -96,6 +96,5 @@ impl From<&Game> for PollResponse {
 pub async fn poll(State(app_state): State<AppState>) -> Json<PollResponse> {
     let game_state = app_state.game.load();
     Json(PollResponse::from(&**game_state))
-
 }
 

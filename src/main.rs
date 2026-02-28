@@ -46,7 +46,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(handlers::root))
-        .route("/connect", post(handlers::bingo::connnect))
+        .route("/connect", post(handlers::bingo::connect))
         .route("/disconnect", post(handlers::bingo::disconnect))
         .route("/submit_win", post(handlers::bingo::submit_win))
         .route("/poll", get(handlers::bingo::poll))
@@ -64,7 +64,6 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
         .await
         .unwrap();
-    println!("Server running @ http://{}", "0.0.0.0:8080");
 
     axum::serve(listener, app)
         .await
